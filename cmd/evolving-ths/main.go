@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	"ths/ths"
 )
@@ -25,6 +26,29 @@ func main() {
 	switch os.Args[1] {
 	case "diag":
 		runDiag(client)
+	case "poc":
+		fs := flag.NewFlagSet("poc", flag.ExitOnError)
+		mode := fs.String("mode", "sim", "poc mode: sim or live")
+		symbol := fs.String("symbol", "589850", "six-digit stock code")
+		qty := fs.Int("qty", 100, "quantity")
+		buyPrice := fs.String("buy-price", "1.800", `buy limit price or "None"`)
+		asset := fs.String("asset", "stock", "asset type")
+		yesLive := fs.Bool("yes-live-trade", false, "required for live poc")
+		yesSim := fs.Bool("yes-sim-trade", false, "required for sim poc")
+		mustParse(fs, os.Args[2:])
+		validateOrder(*symbol, *qty, *buyPrice, *asset)
+		switch *mode {
+		case "sim":
+			requireSim(*yesSim, "poc --mode sim")
+			validateSimAsset(*asset)
+			runSimPOC(simClient, *symbol, *qty, *buyPrice, *asset)
+		case "live":
+			requireLive(*yesLive, "poc --mode live")
+			validateAsset(*asset)
+			runLivePOC(client, *symbol, *qty, *buyPrice, *asset)
+		default:
+			fail("mode must be sim or live")
+		}
 	case "account":
 		out, err := client.GetAccountInfo()
 		printResult("account", out, err)
@@ -159,6 +183,8 @@ func main() {
 func usage() {
 	fmt.Fprintf(os.Stderr, `Usage:
   evolving-ths diag
+  evolving-ths poc --mode sim --symbol 589850 --qty 100 --buy-price 1.800 --yes-sim-trade
+  evolving-ths poc --mode live --symbol 159949 --qty 100 --buy-price 2.000 --yes-live-trade
   evolving-ths account
   evolving-ths holdings [-asset stock|sciTech|gem]
   evolving-ths entrust [-asset stock|sciTech|gem] [-revocable=true|false]
@@ -194,10 +220,133 @@ func runDiag(client interface {
 	}
 }
 
+type liveClient interface {
+	GetAccountInfo() (string, error)
+	GetEntrust(assetType string, isRevocable bool) (string, error)
+	Buy(stockCode string, amount int, price, assetType string) (string, error)
+	RevokeEntrustByContractNo(assetType, contractNo string) (string, error)
+}
+
+type simClient interface {
+	GetAccountInfo() (string, error)
+	GetEntrust(assetType, dateRange string, isRevocable bool) (string, error)
+	IssuingEntrust(tradingAction, assetType, stockCode, price string, amount int) (string, error)
+	RevokeEntrust(revokeType, assetType, contractNo string) (string, error)
+}
+
+func runLivePOC(client liveClient, symbol string, qty int, buyPrice string, asset string) {
+	fmt.Println("poc_mode=live")
+	accountOut, accountErr := step("live_account", client.GetAccountInfo)
+	_, _ = accountOut, accountErr
+	beforeOut, beforeErr := step("live_entrust_before", func() (string, error) {
+		return client.GetEntrust(asset, true)
+	})
+	beforeContracts := extractContracts(beforeOut)
+	buyOut, buyErr := step("live_buy", func() (string, error) {
+		return client.Buy(symbol, qty, buyPrice, asset)
+	})
+	_, _ = buyOut, buyErr
+	if buyErr != nil {
+		step("live_entrust_after_buy_failure", func() (string, error) {
+			return client.GetEntrust(asset, true)
+		})
+		fmt.Println("poc_stopped=live-buy-failed")
+		return
+	}
+	afterOut, afterErr := step("live_entrust_after", func() (string, error) {
+		return client.GetEntrust(asset, true)
+	})
+	if beforeErr != nil || afterErr != nil {
+		fmt.Println("poc_revoke_skipped=entrust-read-failed")
+		return
+	}
+	newContracts := diffContracts(beforeContracts, extractContracts(afterOut))
+	fmt.Printf("poc_new_contracts=%s\n", strings.Join(newContracts, ","))
+	for _, contract := range newContracts {
+		step("live_revoke_"+contract, func() (string, error) {
+			return client.RevokeEntrustByContractNo(asset, contract)
+		})
+	}
+	step("live_entrust_final", func() (string, error) {
+		return client.GetEntrust(asset, true)
+	})
+}
+
+func runSimPOC(client simClient, symbol string, qty int, buyPrice string, asset string) {
+	fmt.Println("poc_mode=sim")
+	step("sim_account", client.GetAccountInfo)
+	beforeOut, beforeErr := step("sim_entrust_before", func() (string, error) {
+		return client.GetEntrust(asset, "today", true)
+	})
+	beforeContracts := extractContracts(beforeOut)
+	if beforeErr != nil {
+		fmt.Println("poc_stopped=sim-entrust-before-failed")
+		return
+	}
+	buyOut, buyErr := step("sim_buy", func() (string, error) {
+		return client.IssuingEntrust("buy", asset, symbol, buyPrice, qty)
+	})
+	_, _ = buyOut, buyErr
+	if buyErr != nil {
+		fmt.Println("poc_stopped=sim-buy-failed")
+		return
+	}
+	afterOut, afterErr := step("sim_entrust_after", func() (string, error) {
+		return client.GetEntrust(asset, "today", true)
+	})
+	if afterErr != nil {
+		fmt.Println("poc_revoke_skipped=entrust-read-failed")
+		return
+	}
+	newContracts := diffContracts(beforeContracts, extractContracts(afterOut))
+	fmt.Printf("poc_new_contracts=%s\n", strings.Join(newContracts, ","))
+	if len(newContracts) == 0 {
+		fmt.Println("poc_revoke_skipped=no-new-contracts")
+		return
+	}
+	for _, contract := range newContracts {
+		step("sim_revoke_"+contract, func() (string, error) {
+			return client.RevokeEntrust("contractNo", asset, contract)
+		})
+	}
+	finalOut, finalErr := step("sim_entrust_final", func() (string, error) {
+		return client.GetEntrust(asset, "today", true)
+	})
+	needsFallback := finalErr != nil || containsAnyContract(finalOut, newContracts)
+	if needsFallback && len(beforeContracts) == 0 {
+		fmt.Println("poc_contract_revoke_incomplete=true")
+		step("sim_revoke_all_fallback", func() (string, error) {
+			return client.RevokeEntrust("allBuyAndSell", asset, "")
+		})
+		fallbackOut, fallbackErr := step("sim_entrust_final_after_fallback", func() (string, error) {
+			return client.GetEntrust(asset, "today", true)
+		})
+		if fallbackErr != nil || containsAnyContract(fallbackOut, newContracts) {
+			fmt.Println("poc_cleanup_failed=true")
+			os.Exit(1)
+		}
+		return
+	}
+	if needsFallback {
+		fmt.Println("poc_cleanup_incomplete=true")
+		os.Exit(1)
+	}
+}
+
+func step(label string, fn func() (string, error)) (string, error) {
+	out, err := fn()
+	if err == nil && isBusinessFailure(out) {
+		err = fmt.Errorf("business failure")
+	}
+	fmt.Printf("%s_err=%v\n", label, err)
+	fmt.Printf("%s_out=%s\n", label, out)
+	return out, err
+}
+
 func printResult(label string, out string, err error) {
 	fmt.Printf("%s_err=%v\n", label, err)
 	fmt.Printf("%s_out=%s\n", label, out)
-	if err != nil {
+	if err != nil || isBusinessFailure(out) {
 		os.Exit(1)
 	}
 }
@@ -257,6 +406,47 @@ func validateDateRange(dateRange string) {
 	default:
 		fail("range must be today, thisWeek, thisMonth, thisSeason, or thisYear")
 	}
+}
+
+func extractContracts(out string) []string {
+	matches := regexp.MustCompile(`\b\d{9,}\b`).FindAllString(out, -1)
+	seen := map[string]bool{}
+	var contracts []string
+	for _, match := range matches {
+		if seen[match] {
+			continue
+		}
+		seen[match] = true
+		contracts = append(contracts, match)
+	}
+	return contracts
+}
+
+func diffContracts(before []string, after []string) []string {
+	seenBefore := map[string]bool{}
+	for _, contract := range before {
+		seenBefore[contract] = true
+	}
+	var result []string
+	for _, contract := range after {
+		if !seenBefore[contract] {
+			result = append(result, contract)
+		}
+	}
+	return result
+}
+
+func containsAnyContract(out string, contracts []string) bool {
+	for _, contract := range contracts {
+		if strings.Contains(out, contract) {
+			return true
+		}
+	}
+	return false
+}
+
+func isBusinessFailure(out string) bool {
+	return strings.Contains(out, "failed")
 }
 
 func fail(format string, args ...interface{}) {

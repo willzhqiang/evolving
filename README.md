@@ -54,6 +54,16 @@ from Go again:
 - Simulated-account mutating commands require `--yes-sim-trade`.
 - Production revoke now supports `--contract-no`; use live `--all` only after
   checking that there are no unrelated revocable orders.
+- Simulation POC creates a low-price buy entrust, reads back the new contract
+  number, then revokes it and verifies the revocable list is empty. If
+  contract-number revoke does not clear the new simulated order and the
+  pre-check list was empty, it falls back to simulated `--all`.
+- Live POC is intentionally narrower: it reads account state, submits one buy
+  attempt, reads new revocable entrusts, and revokes only newly detected
+  contract numbers. Use the explicit `sell` command for sell-path tests.
+- The Tonghuashun macOS app can expose multiple windows through Accessibility.
+  This fork selects the visible trading window dynamically instead of assuming
+  `window 1`.
 
 Examples:
 
@@ -65,7 +75,8 @@ go run ./cmd/evolving-ths entrust --asset stock --revocable=true
 
 # Simulated account
 go run ./cmd/evolving-ths sim-account
-go run ./cmd/evolving-ths sim-buy --symbol 159949 --qty 100 --price 2.000 --yes-sim-trade
+go run ./cmd/evolving-ths poc --mode sim --symbol 589850 --qty 100 --buy-price 1.800 --asset stock --yes-sim-trade
+go run ./cmd/evolving-ths sim-buy --symbol 589850 --qty 100 --price 1.800 --yes-sim-trade
 go run ./cmd/evolving-ths sim-entrust --asset stock --range today --revocable=true
 go run ./cmd/evolving-ths sim-revoke --all --yes-sim-trade
 
@@ -88,6 +99,13 @@ Treat every mutating command as if a human clicked the same buttons:
   current revocable list contains only the intended test orders.
 - During non-trading days the real broker may reject orders before creating any
   entrust, for example with `证券交易未初始化`.
+- Prefer `poc --mode sim` for end-to-end smoke tests. In current testing,
+  `589850` parsed correctly in Tonghuashun simulation while `159949` did not
+  always trigger the app's internal market-code resolution.
+- For scripts that type a security code into Tonghuashun, direct
+  Accessibility `set value` may update the visible field without triggering the
+  app's internal quote/market parser. Prefer an already-selected symbol or a
+  real keyboard input path when building new flows.
 
 ### thsClient (production)
 
