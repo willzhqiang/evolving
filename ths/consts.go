@@ -137,7 +137,7 @@ on loginBroker(broker_name, trade_account, trade_pwd)
 					set po to get position of text field rowNum of list 1 of scroll area 1 of combo box 1 of sheet 1 of window 1 of application process "同花顺" of application "System Events"
 					set po1 to get item 1 of po
 					set po2 to get item 2 of po
-					do shell script "/usr/local/bin/cliclick c:" & po1 & "," & po2
+					do shell script "if [ -x /opt/homebrew/bin/cliclick ]; then /opt/homebrew/bin/cliclick c:" & po1 & "," & po2 & "; else /usr/local/bin/cliclick c:" & po1 & "," & po2 & "; fi"
 					delay 0.25
 					set value of checkbox 1 of sheet 1 of window 1 of application process "同花顺" of application "System Events" to trade_account
 					set value of text field 1 of sheet 1 of window 1 of application process "同花顺" of application "System Events" to trade_pwd

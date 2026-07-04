@@ -37,6 +37,53 @@ client := ths.GetThsClient()
 simClient := ths.GetThsSimClient()
 ```
 
+## Maintained fork notes
+
+This fork keeps the original AppleScript approach, but makes the runtime usable
+from Go again:
+
+- `ths.Run` now supports the repository's legacy constants, which are stored as
+  shell commands like `osascript -e '...'`.
+- A small CLI is available under `cmd/evolving-ths` for smoke tests and guarded
+  trading experiments.
+- Live broker-mutating commands require `--yes-live-trade`.
+- Simulated-account mutating commands require `--yes-sim-trade`.
+- Production revoke remains all-or-nothing in the upstream AppleScript. The CLI
+  requires `revoke --all --yes-live-trade` so this risk is explicit.
+
+Examples:
+
+```bash
+go run ./cmd/evolving-ths diag
+go run ./cmd/evolving-ths account
+go run ./cmd/evolving-ths holdings --asset stock
+go run ./cmd/evolving-ths entrust --asset stock --revocable=true
+
+# Simulated account
+go run ./cmd/evolving-ths sim-account
+go run ./cmd/evolving-ths sim-buy --symbol 159949 --qty 100 --price 2.000 --yes-sim-trade
+go run ./cmd/evolving-ths sim-entrust --asset stock --range today --revocable=true
+go run ./cmd/evolving-ths sim-revoke --all --yes-sim-trade
+
+# Live broker actions. Confirm current visible UI state first.
+go run ./cmd/evolving-ths buy --symbol 159949 --qty 100 --price 2.000 --asset stock --yes-live-trade
+go run ./cmd/evolving-ths sell --symbol 159949 --qty 100 --price 2.100 --asset stock --yes-live-trade
+go run ./cmd/evolving-ths revoke --asset stock --all --yes-live-trade
+```
+
+### Safety model
+
+This project drives the visible Tonghuashun macOS UI. It is not a broker API.
+Treat every mutating command as if a human clicked the same buttons:
+
+- Check login state and account state before every live action.
+- Read current revocable entrusts before and after every test.
+- Prefer simulated-account tests first.
+- Do not use live `revoke --all` unless the current revocable list contains only
+  the intended test orders.
+- During non-trading days the real broker may reject orders before creating any
+  entrust, for example with `证券交易未初始化`.
+
 ### thsClient (production)
 
 ```go

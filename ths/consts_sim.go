@@ -320,7 +320,7 @@ on revokeEntrustSim(revokeType, assetType, contractNo)
 					end if
 					set po1 to get item 1 of po
 					set po2 to get item 2 of po
-					do shell script "/usr/local/bin/cliclick dc:" & po1 & "," & po2
+					do shell script "if [ -x /opt/homebrew/bin/cliclick ]; then /opt/homebrew/bin/cliclick dc:" & po1 & "," & po2 & "; else /usr/local/bin/cliclick dc:" & po1 & "," & po2 & "; fi"
 				end if
 				try
 					click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
