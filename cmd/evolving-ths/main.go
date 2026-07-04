@@ -70,15 +70,22 @@ func main() {
 	case "revoke":
 		fs := flag.NewFlagSet("revoke", flag.ExitOnError)
 		asset := fs.String("asset", "stock", "asset type: stock, sciTech, gem")
+		contractNo := fs.String("contract-no", "", "contract number to revoke")
 		all := fs.Bool("all", false, "allow all revocable orders for the asset to be revoked")
 		yes := fs.Bool("yes-live-trade", false, "required for live revoke")
 		mustParse(fs, os.Args[2:])
 		requireLive(*yes, "revoke")
-		if !*all {
-			fail("production revoke is currently all-or-nothing; pass --all only after confirming no unrelated revocable orders exist")
-		}
 		validateAsset(*asset)
-		out, err := client.RevokeEntrust(*asset)
+		var out string
+		var err error
+		if *all {
+			out, err = client.RevokeEntrust(*asset)
+		} else {
+			if *contractNo == "" {
+				fail("revoke requires --contract-no or --all")
+			}
+			out, err = client.RevokeEntrustByContractNo(*asset, *contractNo)
+		}
 		printResult("revoke", out, err)
 	case "sim-account":
 		out, err := simClient.GetAccountInfo()
@@ -157,6 +164,7 @@ func usage() {
   evolving-ths entrust [-asset stock|sciTech|gem] [-revocable=true|false]
   evolving-ths buy --symbol 600000 --qty 100 --price 1.23 [--asset stock] --yes-live-trade
   evolving-ths sell --symbol 600000 --qty 100 --price 99.99 [--asset stock] --yes-live-trade
+  evolving-ths revoke --asset stock --contract-no 123456 --yes-live-trade
   evolving-ths revoke --asset stock --all --yes-live-trade
   evolving-ths sim-account
   evolving-ths sim-holdings [-asset stock]
@@ -168,7 +176,8 @@ func usage() {
 
 Live commands operate the currently logged-in broker UI. Confirm the visible app
 state before running them. Production revoke is all-or-nothing in the upstream
-AppleScript, so the CLI requires --all as an explicit acknowledgement.
+AppleScript, but this fork supports contract-number revocation for live broker
+orders. Use --all only after checking there are no unrelated revocable orders.
 `)
 }
 

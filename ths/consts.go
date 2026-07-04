@@ -1418,7 +1418,7 @@ on run {assetType, stockCode}
 end run
 '`
 
-const AsRevokeEntrustAllBuyAndSellStock = `osascript -e '
+const AsRevokeEntrust = `osascript -e '
 on revokeEntrust(revokeType, assetType, contractNo)
 	tell application "同花顺" to activate
 	delay 0.5
@@ -1428,77 +1428,56 @@ on revokeEntrust(revokeType, assetType, contractNo)
 				click button 1 of window 1 of application process "同花顺" of application "System Events"
 				click button 6 of window 1 of application process "同花顺" of application "System Events"
 				click button "A股" of window 1 of application process "同花顺" of application "System Events"
-				click button "股票" of window 1 of application process "同花顺" of application "System Events"
+				if assetType is "stock" then
+					click button "股票" of window 1 of application process "同花顺" of application "System Events"
+				else if assetType is "sciTech" then
+					click button "科创板盘后" of window 1 of application process "同花顺" of application "System Events"
+				else if assetType is "gem" then
+					click button "创业板盘后" of window 1 of application process "同花顺" of application "System Events"
+				else
+					return {"failed", "wrong option: " & assetType}
+				end if
 				click button "委托" of window 1 of application process "同花顺" of application "System Events"
 				delay 0.2
-				click button "全撤" of window 1 of application process "同花顺" of application "System Events"
+				if revokeType is "allBuyAndSell" then
+					click button "全撤" of window 1 of application process "同花顺" of application "System Events"
+				else if revokeType is "contractNo" then
+					set idarea to 4
+					try
+						set EntrustmentList to get value of static text of row of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
+					on error
+						set idarea to 5
+						set EntrustmentList to get value of static text of row of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
+					end try
+					if EntrustmentList is {} then
+						return {"successed", "nothing to revoke"}
+					end if
+					repeat with rowNum from 1 to length of EntrustmentList
+						set theCurrentListItem to item rowNum of EntrustmentList
+						if theCurrentListItem contains contractNo then
+							exit repeat
+						end if
+					end repeat
+					set len to length of EntrustmentList
+					if rowNum is len then
+						if theCurrentListItem does not contain contractNo then
+							return {"successed", "contract No. " & contractNo & " was not found"}
+						end if
+					end if
+					if idarea is 4 then
+						set po to get position of (get item 11 of (get static text of row rowNum of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"))
+					else if idarea is 5 then
+						set po to get position of (get item 11 of (get static text of row rowNum of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"))
+					end if
+					set po1 to get item 1 of po
+					set po2 to get item 2 of po
+					do shell script "if [ -x /opt/homebrew/bin/cliclick ]; then /opt/homebrew/bin/cliclick dc:" & po1 & "," & po2 & "; else /usr/local/bin/cliclick dc:" & po1 & "," & po2 & "; fi"
+				else
+					return {"failed", "wrong revoke type: " & revokeType}
+				end if
 				try
 					click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
-					return {"successed", "revoke allBuyAndSell stock is successed"}
-				on error
-					return {"successed", "nothing to revoke"}
-				end try
-			on error
-				return {"failed", "unknown err"}
-			end try
-		end tell
-	end tell
-end revokeEntrust
-
-on run {revokeType, assetType, contractNo}
-	revokeEntrust(revokeType, assetType, contractNo)
-end run
-'`
-
-const AsRevokeEntrustAllBuyAndSellSciTech = `osascript -e '
-on revokeEntrust(revokeType, assetType, contractNo)
-	tell application "同花顺" to activate
-	delay 0.5
-	tell application "System Events"
-		tell process "同花顺"
-			try
-				click button 1 of window 1 of application process "同花顺" of application "System Events"
-				click button 6 of window 1 of application process "同花顺" of application "System Events"
-				click button "A股" of window 1 of application process "同花顺" of application "System Events"
-				click button "科创板盘后" of window 1 of application process "同花顺" of application "System Events"
-				click button "委托" of window 1 of application process "同花顺" of application "System Events"
-				delay 0.2
-				click button "全撤" of window 1 of application process "同花顺" of application "System Events"
-				try
-					click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
-					return {"successed", "revoke allBuyAndSell sciTech is successed"}
-				on error
-					return {"successed", "nothing to revoke"}
-				end try
-			on error
-				return {"failed", "unknown err"}
-			end try
-		end tell
-	end tell
-end revokeEntrust
-
-on run {revokeType, assetType, contractNo}
-	revokeEntrust(revokeType, assetType, contractNo)
-end run
-'`
-
-const AsRevokeEntrustAllBuyAndSellGem = `osascript -e '
-on revokeEntrust(revokeType, assetType, contractNo)
-	tell application "同花顺" to activate
-	delay 0.5
-	tell application "System Events"
-		tell process "同花顺"
-			try
-				click button 1 of window 1 of application process "同花顺" of application "System Events"
-				click button 6 of window 1 of application process "同花顺" of application "System Events"
-				click button "A股" of window 1 of application process "同花顺" of application "System Events"
-				click button "创业板盘后" of window 1 of application process "同花顺" of application "System Events"
-				click button "委托" of window 1 of application process "同花顺" of application "System Events"
-				delay 0.2
-				click button "全撤" of window 1 of application process "同花顺" of application "System Events"
-				try
-					click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
-					return {"successed", "revoke allBuyAndSell gem is successed"}
+					return {"successed", "revoke " & revokeType & " " & assetType & " is successed"}
 				on error
 					return {"successed", "nothing to revoke"}
 				end try

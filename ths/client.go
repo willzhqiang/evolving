@@ -275,20 +275,22 @@ func (t *thsClient) GetClosedDeals(assetType string) (string, error) {
 }
 
 func (t *thsClient) RevokeEntrust(assetType string) (string, error) {
+	return t.revokeEntrust("allBuyAndSell", assetType, `""`)
+}
+
+func (t *thsClient) RevokeEntrustByContractNo(assetType, contractNo string) (string, error) {
+	if strings.TrimSpace(contractNo) == "" {
+		return "", errors.New("contractNo is required")
+	}
+	return t.revokeEntrust("contractNo", assetType, contractNo)
+}
+
+func (t *thsClient) revokeEntrust(revokeType, assetType, contractNo string) (string, error) {
 	if err := t.getLock(); err != nil {
 		return "", err
 	}
 	defer t.unLock()
-	var script string
-	switch assetType {
-	case "sciTech":
-		script = AsRevokeEntrustAllBuyAndSellSciTech
-	case "gem":
-		script = AsRevokeEntrustAllBuyAndSellGem
-	default:
-		script = AsRevokeEntrustAllBuyAndSellStock
-	}
-	return Run(script + " allBuyAndSell " + assetType + " \"\"")
+	return Run(AsRevokeEntrust + " " + revokeType + " " + assetType + " " + contractNo)
 }
 
 func (t *thsClient) RevokeAllEntrust() (string, error) {

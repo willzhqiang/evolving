@@ -28,6 +28,10 @@ ths/
 - cliclick >= 4.0.1 (`brew install cliclick`)
 - Tonghuashun client
 
+The AppleScript snippets try `/opt/homebrew/bin/cliclick` first and then
+`/usr/local/bin/cliclick`, covering both Apple Silicon and Intel Homebrew
+defaults.
+
 ## Usage
 
 ```go
@@ -48,8 +52,8 @@ from Go again:
   trading experiments.
 - Live broker-mutating commands require `--yes-live-trade`.
 - Simulated-account mutating commands require `--yes-sim-trade`.
-- Production revoke remains all-or-nothing in the upstream AppleScript. The CLI
-  requires `revoke --all --yes-live-trade` so this risk is explicit.
+- Production revoke now supports `--contract-no`; use live `--all` only after
+  checking that there are no unrelated revocable orders.
 
 Examples:
 
@@ -68,6 +72,7 @@ go run ./cmd/evolving-ths sim-revoke --all --yes-sim-trade
 # Live broker actions. Confirm current visible UI state first.
 go run ./cmd/evolving-ths buy --symbol 159949 --qty 100 --price 2.000 --asset stock --yes-live-trade
 go run ./cmd/evolving-ths sell --symbol 159949 --qty 100 --price 2.100 --asset stock --yes-live-trade
+go run ./cmd/evolving-ths revoke --asset stock --contract-no 123456 --yes-live-trade
 go run ./cmd/evolving-ths revoke --asset stock --all --yes-live-trade
 ```
 
@@ -79,8 +84,8 @@ Treat every mutating command as if a human clicked the same buttons:
 - Check login state and account state before every live action.
 - Read current revocable entrusts before and after every test.
 - Prefer simulated-account tests first.
-- Do not use live `revoke --all` unless the current revocable list contains only
-  the intended test orders.
+- Prefer live `revoke --contract-no`; use live `revoke --all` only when the
+  current revocable list contains only the intended test orders.
 - During non-trading days the real broker may reject orders before creating any
   entrust, for example with `证券交易未初始化`.
 
