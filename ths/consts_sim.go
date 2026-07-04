@@ -6,13 +6,22 @@ on getAccountInfoSim()
 	delay 0.5
 	tell application "System Events"
 		tell process "同花顺"
+			set tradeWindow to window 1
+			repeat with candidateWindow in windows
+				try
+					if (count of buttons of candidateWindow) > 0 or (count of scroll areas of candidateWindow) > 0 then
+						set tradeWindow to candidateWindow
+						exit repeat
+					end if
+				end try
+			end repeat
 			try
-				click button 6 of window 1 of application process "同花顺" of application "System Events"
-				click button "A股" of window 1 of application process "同花顺" of application "System Events"
-				click button "模拟" of window 1 of application process "同花顺" of application "System Events"
+				click button 6 of tradeWindow
+				click button "A股" of tradeWindow
+				click button "模拟" of tradeWindow
 				delay 0.6
-				tell table 1 of scroll area 1 of window 1
-					set simulationAccountInfo to get value of every static text of every UI element of every row of table 1 of scroll area 1 of window 1 of application process "同花顺" of application "System Events"
+				tell table 1 of scroll area 1 of tradeWindow
+					set simulationAccountInfo to get value of every static text of every UI element of every row of table 1 of scroll area 1 of tradeWindow
 					return {"successed", simulationAccountInfo}
 				end tell
 			on error
@@ -30,109 +39,118 @@ on issuingEntrustSim(tradingAction, assetType, stockCode, price, amount)
 	delay 0.4
 	tell application "System Events"
 		tell process "同花顺"
+			set tradeWindow to window 1
+			repeat with candidateWindow in windows
+				try
+					if (count of buttons of candidateWindow) > 0 or (count of scroll areas of candidateWindow) > 0 then
+						set tradeWindow to candidateWindow
+						exit repeat
+					end if
+				end try
+			end repeat
 			try
-				click button 1 of window 1 of application process "同花顺" of application "System Events"
-				click button 6 of window 1 of application process "同花顺" of application "System Events"
-				click button "模拟" of window 1 of application process "同花顺" of application "System Events"
+				click button 1 of tradeWindow
+				click button 6 of tradeWindow
+				click button "模拟" of tradeWindow
 				if assetType is "stock" then
-					click button "股票" of window 1 of application process "同花顺" of application "System Events"
+					click button "股票" of tradeWindow
 				else
 					return {"failed", "wrong option: " & assetType}
 				end if
-				click button "持仓" of window 1 of application process "同花顺" of application "System Events"
-				click button "委托" of window 1 of application process "同花顺" of application "System Events"
-				click button "今天" of window 1 of application process "同花顺" of application "System Events"
+				click button "持仓" of tradeWindow
+				click button "委托" of tradeWindow
+				click button "今天" of tradeWindow
 				delay 0.01
-				click button "今天" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
-				set theCheckbox to checkbox 1 of window 1 of application process "同花顺" of application "System Events"
+				click button "今天" of pop over 1 of tradeWindow
+				set theCheckbox to checkbox 1 of tradeWindow
 				tell theCheckbox
 					set checkboxStatus to value of theCheckbox as boolean
 					if checkboxStatus is true then click theCheckbox
 				end tell
 				try
-					set revocableEntrustment1 to get value of static text of every row of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
-					set comments1 to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
+					set revocableEntrustment1 to get value of static text of every row of table 1 of scroll area 4 of tradeWindow
+					set comments1 to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of tradeWindow
 				on error
-					set revocableEntrustment1 to get value of static text of every row of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
-					set comments1 to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
+					set revocableEntrustment1 to get value of static text of every row of table 1 of scroll area 5 of tradeWindow
+					set comments1 to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of tradeWindow
 				end try
-				set value of text field 2 of window 1 of application process "同花顺" of application "System Events" to stockCode
+				set value of text field 2 of tradeWindow to stockCode
 				if tradingAction is "buy" then
-					click button "卖出" of window 1 of application process "同花顺" of application "System Events"
-					click button "买入" of window 1 of application process "同花顺" of application "System Events"
+					click button "卖出" of tradeWindow
+					click button "买入" of tradeWindow
 				else if tradingAction is "sell" then
-					click button "卖出" of window 1 of application process "同花顺" of application "System Events"
-					click button "买入" of window 1 of application process "同花顺" of application "System Events"
-					click button "卖出" of window 1 of application process "同花顺" of application "System Events"
+					click button "卖出" of tradeWindow
+					click button "买入" of tradeWindow
+					click button "卖出" of tradeWindow
 				end if
-				set value of attribute "AXFocused" of text field 2 of window 1 of application process "同花顺" of application "System Events" to true
-				set value of text field 2 of window 1 of application process "同花顺" of application "System Events" to stockCode
+				set value of attribute "AXFocused" of text field 2 of tradeWindow to true
+				set value of text field 2 of tradeWindow to stockCode
 				if price is "None" then
 					delay 0.05
 					if tradingAction is "buy" then
-						set price to item 1 of item 1 of (get value of attribute "AXTitle" of every button of every UI element of row 1 of table 1 of scroll area 2 of window 1 of application process "同花顺" of application "System Events")
+						set price to item 1 of item 1 of (get value of attribute "AXTitle" of every button of every UI element of row 1 of table 1 of scroll area 2 of tradeWindow)
 						if price is "- -" then
-							set price to item 1 of item 1 of (get value of attribute "AXTitle" of every button of every UI element of row 1 of table 1 of scroll area 3 of window 1 of application process "同花顺" of application "System Events")
+							set price to item 1 of item 1 of (get value of attribute "AXTitle" of every button of every UI element of row 1 of table 1 of scroll area 3 of tradeWindow)
 						end if
 					else if tradingAction is "sell" then
-						set price to item 1 of item 1 of (get value of attribute "AXTitle" of every button of every UI element of row 5 of table 1 of scroll area 3 of window 1 of application process "同花顺" of application "System Events")
+						set price to item 1 of item 1 of (get value of attribute "AXTitle" of every button of every UI element of row 5 of table 1 of scroll area 3 of tradeWindow)
 						if price is "- -" then
-							set price to item 1 of item 1 of (get value of attribute "AXTitle" of every button of every UI element of row 5 of table 1 of scroll area 2 of window 1 of application process "同花顺" of application "System Events")
+							set price to item 1 of item 1 of (get value of attribute "AXTitle" of every button of every UI element of row 5 of table 1 of scroll area 2 of tradeWindow)
 						end if
 					end if
 				end if
 				delay 0.25
-				set value of text field 1 of window 1 of application process "同花顺" of application "System Events" to price
-				set value of text field 3 of window 1 of application process "同花顺" of application "System Events" to amount
+				set value of text field 1 of tradeWindow to price
+				set value of text field 3 of tradeWindow to amount
 				if tradingAction is "buy" then
-					click button "确定买入" of window 1 of application process "同花顺" of application "System Events"
+					click button "确定买入" of tradeWindow
 				else if tradingAction is "sell" then
-					click button "确定卖出" of window 1 of application process "同花顺" of application "System Events"
+					click button "确定卖出" of tradeWindow
 				end if
 				try
-					set info to get value of static text of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+					set info to get value of static text of sheet 1 of tradeWindow
 					if info contains "提示信息" then
 						delay 0.01
-						click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+						click button "确认" of sheet 1 of tradeWindow
 					end if
 				end try
 				try
-					set info to get value of static text of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+					set info to get value of static text of sheet 1 of tradeWindow
 				end try
 				if info contains {"买入委托"} or info contains {"卖出委托"} then
 					delay 0.01
-					click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "确认" of sheet 1 of tradeWindow
 				end if
 				set flag to 0
 				set info to ""
 				try
-					set info to get value of static text of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+					set info to get value of static text of sheet 1 of tradeWindow
 				end try
 				if info contains {"警告"} then
 					set flag to -1
 				end if
 				delay 0.1
 				if flag is not 0 then
-					click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "确认" of sheet 1 of tradeWindow
 					return {"failed", flag, info}
 				end if
 				delay 0.25
-				click button "持仓" of window 1 of application process "同花顺" of application "System Events"
-				click button "委托" of window 1 of application process "同花顺" of application "System Events"
-				click button "今天" of window 1 of application process "同花顺" of application "System Events"
+				click button "持仓" of tradeWindow
+				click button "委托" of tradeWindow
+				click button "今天" of tradeWindow
 				delay 0.01
-				click button "今天" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
-				set theCheckbox to checkbox 1 of window 1 of application process "同花顺" of application "System Events"
+				click button "今天" of pop over 1 of tradeWindow
+				set theCheckbox to checkbox 1 of tradeWindow
 				tell theCheckbox
 					set checkboxStatus to value of theCheckbox as boolean
 					if checkboxStatus is true then click theCheckbox
 				end tell
 				try
-					set revocableEntrustment2 to get value of static text of every row of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
-					set comments2 to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
+					set revocableEntrustment2 to get value of static text of every row of table 1 of scroll area 4 of tradeWindow
+					set comments2 to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of tradeWindow
 				on error
-					set revocableEntrustment2 to get value of static text of every row of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
-					set comments2 to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
+					set revocableEntrustment2 to get value of static text of every row of table 1 of scroll area 5 of tradeWindow
+					set comments2 to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of tradeWindow
 				end try
 				set contractNoList to {}
 				set contractNoList1 to {}
@@ -173,23 +191,32 @@ on getHoldingSharesSim(assetType)
 	delay 0.5
 	tell application "System Events"
 		tell process "同花顺"
+			set tradeWindow to window 1
+			repeat with candidateWindow in windows
+				try
+					if (count of buttons of candidateWindow) > 0 or (count of scroll areas of candidateWindow) > 0 then
+						set tradeWindow to candidateWindow
+						exit repeat
+					end if
+				end try
+			end repeat
 			try
-				click button 1 of window 1 of application process "同花顺" of application "System Events"
-				click button 6 of window 1 of application process "同花顺" of application "System Events"
-				click button "模拟" of window 1 of application process "同花顺" of application "System Events"
+				click button 1 of tradeWindow
+				click button 6 of tradeWindow
+				click button "模拟" of tradeWindow
 				if assetType is "stock" then
-					click button "股票" of window 1 of application process "同花顺" of application "System Events"
+					click button "股票" of tradeWindow
 				else
 					return {"failed", "wrong option: " & assetType}
 				end if
-				click button "持仓" of window 1 of application process "同花顺" of application "System Events"
+				click button "持仓" of tradeWindow
 				try
-					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
-					set holdingShares to get value of every static text of every row of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
+					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of tradeWindow
+					set holdingShares to get value of every static text of every row of table 1 of scroll area 4 of tradeWindow
 					return {"successed", comments, holdingShares}
 				on error
-					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
-					set holdingShares to get value of every static text of every row of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
+					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of tradeWindow
+					set holdingShares to get value of every static text of every row of table 1 of scroll area 5 of tradeWindow
 					return {"successed", comments, holdingShares}
 				end try
 			on error
@@ -210,27 +237,36 @@ on getEntrustSim(assetType, dateRange, isRevocable)
 	delay 0.5
 	tell application "System Events"
 		tell process "同花顺"
+			set tradeWindow to window 1
+			repeat with candidateWindow in windows
+				try
+					if (count of buttons of candidateWindow) > 0 or (count of scroll areas of candidateWindow) > 0 then
+						set tradeWindow to candidateWindow
+						exit repeat
+					end if
+				end try
+			end repeat
 			try
-				click button 1 of window 1 of application process "同花顺" of application "System Events"
-				click button 6 of window 1 of application process "同花顺" of application "System Events"
-				click button "模拟" of window 1 of application process "同花顺" of application "System Events"
-				click button "股票" of window 1 of application process "同花顺" of application "System Events"
-				click button "持仓" of window 1 of application process "同花顺" of application "System Events"
-				click button "委托" of window 1 of application process "同花顺" of application "System Events"
-				click button "今天" of window 1 of application process "同花顺" of application "System Events"
+				click button 1 of tradeWindow
+				click button 6 of tradeWindow
+				click button "模拟" of tradeWindow
+				click button "股票" of tradeWindow
+				click button "持仓" of tradeWindow
+				click button "委托" of tradeWindow
+				click button "今天" of tradeWindow
 				delay 0.1
 				if dateRange is "today" then
-					click button "今天" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "今天" of pop over 1 of tradeWindow
 				else if dateRange is "thisWeek" then
-					click button "本周" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本周" of pop over 1 of tradeWindow
 				else if dateRange is "thisMonth" then
-					click button "本月" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本月" of pop over 1 of tradeWindow
 				else if dateRange is "thisSeason" then
-					click button "本季" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本季" of pop over 1 of tradeWindow
 				else if dateRange is "thisYear" then
-					click button "本年" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本年" of pop over 1 of tradeWindow
 				end if
-				set theCheckbox to checkbox 1 of window 1 of application process "同花顺" of application "System Events"
+				set theCheckbox to checkbox 1 of tradeWindow
 				tell theCheckbox
 					set checkboxStatus to value of theCheckbox as boolean
 					if isRevocable is "true" then
@@ -240,19 +276,19 @@ on getEntrustSim(assetType, dateRange, isRevocable)
 					end if
 				end tell
 				try
-					set info to get value of static text of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+					set info to get value of static text of sheet 1 of tradeWindow
 					if info is {"警告", "不支持历史委托查询"} then
-						click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+						click button "确认" of sheet 1 of tradeWindow
 						return {"failed", info}
 					end if
 				end try
 				try
-					set revocableEntrustment to get value of static text of every row of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
-					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
+					set revocableEntrustment to get value of static text of every row of table 1 of scroll area 4 of tradeWindow
+					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of tradeWindow
 					return {"successed", comments, revocableEntrustment}
 				on error
-					set revocableEntrustment to get value of static text of every row of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
-					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
+					set revocableEntrustment to get value of static text of every row of table 1 of scroll area 5 of tradeWindow
+					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of tradeWindow
 					return {"successed", comments, revocableEntrustment}
 				end try
 			on error
@@ -273,30 +309,39 @@ on revokeEntrustSim(revokeType, assetType, contractNo)
 	delay 0.4
 	tell application "System Events"
 		tell process "同花顺"
+			set tradeWindow to window 1
+			repeat with candidateWindow in windows
+				try
+					if (count of buttons of candidateWindow) > 0 or (count of scroll areas of candidateWindow) > 0 then
+						set tradeWindow to candidateWindow
+						exit repeat
+					end if
+				end try
+			end repeat
 			try
-				click button 1 of window 1 of application process "同花顺" of application "System Events"
-				click button 6 of window 1 of application process "同花顺" of application "System Events"
-				click button "模拟" of window 1 of application process "同花顺" of application "System Events"
+				click button 1 of tradeWindow
+				click button 6 of tradeWindow
+				click button "模拟" of tradeWindow
 				if assetType is "stock" then
-					click button "股票" of window 1 of application process "同花顺" of application "System Events"
+					click button "股票" of tradeWindow
 				else
 					return {"failed", "wrong option"}
 				end if
-				click button "委托" of window 1 of application process "同花顺" of application "System Events"
+				click button "委托" of tradeWindow
 				delay 0.2
 				if revokeType is "allBuyAndSell" then
-					click button "全撤" of window 1 of application process "同花顺" of application "System Events"
+					click button "全撤" of tradeWindow
 				else if revokeType is "allBuy" then
-					click button "撤买" of window 1 of application process "同花顺" of application "System Events"
+					click button "撤买" of tradeWindow
 				else if revokeType is "allSell" then
-					click button "撤卖" of window 1 of application process "同花顺" of application "System Events"
+					click button "撤卖" of tradeWindow
 				else if revokeType is "contractNo" then
 					set idarea to 4
 					try
-						set EntrustmentList to get value of static text of row of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
+						set EntrustmentList to get value of static text of row of table 1 of scroll area 4 of tradeWindow
 					on error
 						set idarea to 5
-						set EntrustmentList to get value of static text of row of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
+						set EntrustmentList to get value of static text of row of table 1 of scroll area 5 of tradeWindow
 					end try
 					if EntrustmentList is {} then
 						return {"successed", "nothing to revoke"}
@@ -314,16 +359,16 @@ on revokeEntrustSim(revokeType, assetType, contractNo)
 						end if
 					end if
 					if idarea is 4 then
-						set po to get position of (get item 11 of (get static text of row rowNum of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"))
+						set po to get position of (get item 11 of (get static text of row rowNum of table 1 of scroll area 4 of tradeWindow))
 					else if idarea is 5 then
-						set po to get position of (get item 11 of (get static text of row rowNum of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"))
+						set po to get position of (get item 11 of (get static text of row rowNum of table 1 of scroll area 5 of tradeWindow))
 					end if
 					set po1 to get item 1 of po
 					set po2 to get item 2 of po
-					do shell script "/usr/local/bin/cliclick dc:" & po1 & "," & po2
+					do shell script "if [ -x /opt/homebrew/bin/cliclick ]; then /opt/homebrew/bin/cliclick dc:" & po1 & "," & po2 & "; else /usr/local/bin/cliclick dc:" & po1 & "," & po2 & "; fi"
 				end if
 				try
-					click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "确认" of sheet 1 of tradeWindow
 					return {"successed", "revoke " & revokeType & " " & assetType & " is successed"}
 				on error
 					return {"successed", "nothing to revoke"}
@@ -346,36 +391,45 @@ on getClosedDealsSim(assetType, dateRange)
 	delay 0.5
 	tell application "System Events"
 		tell process "同花顺"
+			set tradeWindow to window 1
+			repeat with candidateWindow in windows
+				try
+					if (count of buttons of candidateWindow) > 0 or (count of scroll areas of candidateWindow) > 0 then
+						set tradeWindow to candidateWindow
+						exit repeat
+					end if
+				end try
+			end repeat
 			try
-				click button 1 of window 1 of application process "同花顺" of application "System Events"
-				click button 6 of window 1 of application process "同花顺" of application "System Events"
-				click button "模拟" of window 1 of application process "同花顺" of application "System Events"
-				click button "股票" of window 1 of application process "同花顺" of application "System Events"
-				click button "成交" of window 1 of application process "同花顺" of application "System Events"
-				click button "今天" of window 1 of application process "同花顺" of application "System Events"
+				click button 1 of tradeWindow
+				click button 6 of tradeWindow
+				click button "模拟" of tradeWindow
+				click button "股票" of tradeWindow
+				click button "成交" of tradeWindow
+				click button "今天" of tradeWindow
 				if dateRange is "today" then
-					click button "今天" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "今天" of pop over 1 of tradeWindow
 				else if dateRange is "thisWeek" then
-					click button "本周" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本周" of pop over 1 of tradeWindow
 				else if dateRange is "thisMonth" then
-					click button "本月" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本月" of pop over 1 of tradeWindow
 				else if dateRange is "thisSeason" then
-					click button "本季" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本季" of pop over 1 of tradeWindow
 				else if dateRange is "thisYear" then
-					click button "本年" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本年" of pop over 1 of tradeWindow
 				end if
 				delay 0.1
 				try
-					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
-					set closedDeals to get value of every static text of every row of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
+					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of tradeWindow
+					set closedDeals to get value of every static text of every row of table 1 of scroll area 4 of tradeWindow
 				on error
-					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
-					set closedDeals to get value of every static text of every row of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
+					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of tradeWindow
+					set closedDeals to get value of every static text of every row of table 1 of scroll area 5 of tradeWindow
 				end try
 				try
-					set info to get value of static text of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+					set info to get value of static text of sheet 1 of tradeWindow
 					if info contains "警告" then
-						click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+						click button "确认" of sheet 1 of tradeWindow
 						return {"failed", {"警告, 业务提示: 查询时间区间必须在30天以内"}}
 					end if
 					return {"successed", comments, closedDeals}
@@ -400,37 +454,46 @@ on getCapitalDetailsSim(assetType, dateRange)
 	delay 0.5
 	tell application "System Events"
 		tell process "同花顺"
+			set tradeWindow to window 1
+			repeat with candidateWindow in windows
+				try
+					if (count of buttons of candidateWindow) > 0 or (count of scroll areas of candidateWindow) > 0 then
+						set tradeWindow to candidateWindow
+						exit repeat
+					end if
+				end try
+			end repeat
 			try
-				click button 1 of window 1 of application process "同花顺" of application "System Events"
-				click button 6 of window 1 of application process "同花顺" of application "System Events"
-				click button "模拟" of window 1 of application process "同花顺" of application "System Events"
+				click button 1 of tradeWindow
+				click button 6 of tradeWindow
+				click button "模拟" of tradeWindow
 				delay 0.1
-				click button "股票" of window 1 of application process "同花顺" of application "System Events"
-				click button "资金明细" of window 1 of application process "同花顺" of application "System Events"
-				click button "今天" of window 1 of application process "同花顺" of application "System Events"
+				click button "股票" of tradeWindow
+				click button "资金明细" of tradeWindow
+				click button "今天" of tradeWindow
 				if dateRange is "today" then
-					click button "今天" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "今天" of pop over 1 of tradeWindow
 				else if dateRange is "thisWeek" then
-					click button "本周" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本周" of pop over 1 of tradeWindow
 				else if dateRange is "thisMonth" then
-					click button "本月" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本月" of pop over 1 of tradeWindow
 				else if dateRange is "thisSeason" then
-					click button "本季" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本季" of pop over 1 of tradeWindow
 				else if dateRange is "thisYear" then
-					click button "本年" of pop over 1 of window 1 of application process "同花顺" of application "System Events"
+					click button "本年" of pop over 1 of tradeWindow
 				end if
 				delay 0.1
 				try
-					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
-					set closedDeals to get value of every text field of every row of table 1 of scroll area 4 of window 1 of application process "同花顺" of application "System Events"
+					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 4 of tradeWindow
+					set closedDeals to get value of every text field of every row of table 1 of scroll area 4 of tradeWindow
 				on error
-					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
-					set closedDeals to get value of every text field of every row of table 1 of scroll area 5 of window 1 of application process "同花顺" of application "System Events"
+					set comments to get value of attribute "AXTitle" of button of group 1 of table 1 of scroll area 5 of tradeWindow
+					set closedDeals to get value of every text field of every row of table 1 of scroll area 5 of tradeWindow
 				end try
 				try
-					set info to get value of static text of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+					set info to get value of static text of sheet 1 of tradeWindow
 					if info contains "警告" then
-						click button "确认" of sheet 1 of window 1 of application process "同花顺" of application "System Events"
+						click button "确认" of sheet 1 of tradeWindow
 						return {"failed", "警告"}
 					end if
 					return {"successed", comments, closedDeals}

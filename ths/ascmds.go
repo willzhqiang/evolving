@@ -7,7 +7,7 @@ import (
 )
 
 func Run(script string) (string, error) {
-	cmd := exec.Command("/usr/bin/osascript", "-e", script)
+	cmd := commandForScript(script)
 	output, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -16,4 +16,12 @@ func Run(script string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(output)), nil
+}
+
+func commandForScript(script string) *exec.Cmd {
+	trimmed := strings.TrimSpace(script)
+	if strings.HasPrefix(trimmed, "osascript ") {
+		return exec.Command("/bin/zsh", "-lc", trimmed)
+	}
+	return exec.Command("/usr/bin/osascript", "-e", script)
 }

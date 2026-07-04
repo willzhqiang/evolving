@@ -126,6 +126,9 @@ func (t *thsSimClient) RevokeEntrust(revokeType, assetType, contractNo string) (
 		return "", err
 	}
 	defer t.unLock()
+	if contractNo == "" {
+		contractNo = `""`
+	}
 	return Run(AsRevokeEntrustSim + " " + revokeType + " " + assetType + " " + contractNo)
 }
 
